@@ -1,4 +1,4 @@
-import express from 'express'; import crypto from 'crypto'; import webpush from 'web-push';
+ import express from 'express'; import crypto from 'crypto'; import webpush from 'web-push';
 const app=express(); app.use(express.json({limit:'100kb'})); app.use(express.static('public'));
 const PORT=process.env.PORT||3000; const PUB=process.env.VAPID_PUBLIC_KEY, PRIV=process.env.VAPID_PRIVATE_KEY;
 if(PUB&&PRIV) webpush.setVapidDetails(process.env.VAPID_SUBJECT||'mailto:admin@example.com',PUB,PRIV);
@@ -16,3 +16,4 @@ app.post('/api/watch',(q,r)=>{const {subscription,setup}=q.body||{};if(!subscrip
 app.post('/api/watch/disarm',(q,r)=>{if(q.body?.endpoint)watches.delete(q.body.endpoint);r.json({ok:true})});
 async function poll(){for(const [id,w] of [...watches])try{if(await valid(w.setup)){const s=w.setup;await webpush.sendNotification(w.subscription,JSON.stringify({title:`İŞLEME GİR — ${s.symbol} ${s.side}`,body:`${s.leverage}x • Giriş ~${s.entry} • Stop ${s.stop} • Kayıp ~$${s.maxLoss} • TP1 ${s.tp1} (+$${s.profit1}) • TP2 ${s.tp2} (+$${s.profit2})`,url:'/'}));watches.delete(id)}}catch(e){if(e.statusCode===404||e.statusCode===410)watches.delete(id);console.error(e.message)}}
 setInterval(poll,60000); app.listen(PORT,()=>console.log(`TradeAlarm PWA :${PORT}`));
+app.use(express.static('.'));
