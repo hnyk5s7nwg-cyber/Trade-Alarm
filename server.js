@@ -17,3 +17,30 @@ app.post('/api/watch/disarm',(q,r)=>{if(q.body?.endpoint)watches.delete(q.body.e
 async function poll(){for(const [id,w] of [...watches])try{if(await valid(w.setup)){const s=w.setup;await webpush.sendNotification(w.subscription,JSON.stringify({title:`İŞLEME GİR — ${s.symbol} ${s.side}`,body:`${s.leverage}x • Giriş ~${s.entry} • Stop ${s.stop} • Kayıp ~$${s.maxLoss} • TP1 ${s.tp1} (+$${s.profit1}) • TP2 ${s.tp2} (+$${s.profit2})`,url:'/'}));watches.delete(id)}}catch(e){if(e.statusCode===404||e.statusCode===410)watches.delete(id);console.error(e.message)}}
 setInterval(poll,60000); app.listen(PORT,()=>console.log(`TradeAlarm PWA :${PORT}`));
 app.use(express.static('.'));
+app.post('/api/test-notification', async (req, res) => {
+  const { subscription } = req.body || {};
+
+  if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+    return res.status(400).json({ error: 'Bildirim aboneliği eksik.' });
+  }
+
+  if (!PUB || !PRIV) {
+    return res.status(503).json({ error: 'Bildirim anahtarları eksik.' });
+  }
+
+  try {
+    await webpush.sendNotification(
+      subscription,
+      JSON.stringify({
+        title: '🔔 TRADE ALARM TEST',
+        body: 'Başarılı! iPhone bildirim sistemi çalışıyor.',
+        url: '/'
+      })
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Test bildirimi hatası:', err.message);
+    res.status(500).json({ error: 'Test bildirimi gönderilemedi.' });
+  }
+});
